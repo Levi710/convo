@@ -28,6 +28,18 @@ print("Loading Whisper model...")
 model = whisper.load_model("base")
 print("Whisper model loaded.")
 
+
+# Helper to convert seconds to VTT timestamp
+def format_timestamp(seconds: float):
+    x = seconds
+    hours = int(x // 3600)
+    x %= 3600
+    minutes = int(x // 60)
+    x %= 60
+    seconds = int(x)
+    milliseconds = int((x - seconds) * 1000)
+    return f"{hours:02}:{minutes:02}:{seconds:02}.{milliseconds:03}"
+
 @app.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
     # Create a temporary file to save the uploaded audio
@@ -37,9 +49,34 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
     try:
         # Transcribe
-        print(f"Transcribing {file.filename}...")
-        result = model.transcribe(temp_path)
-        return {"text": result["text"], "usage": "Transcribed successfully"}
+        print("\n" + "="*50)
+        print(f"🚀 RECEIVED VIDEO: {file.filename}")
+        print("⏳ Processing started... (AI is listening & Translating to English)")
+        print("="*50 + "\n")
+        
+        # task="translate" forces output to be in English
+        result = model.transcribe(temp_path, task="translate")
+        
+        # Generate VTT
+        vtt_output = "WEBVTT\n\n"
+        for segment in result["segments"]:
+            start = format_timestamp(segment["start"])
+            end = format_timestamp(segment["end"])
+            text = segment["text"].strip()
+            vtt_output += f"{start} --> {end}\n{text}\n\n"
+            
+            # Print live progress for the user to see
+            print(f"[{start} -> {end}] {text[:50]}...")
+
+        print("\n" + "="*50)
+        print("✅ DONE! Sending subtitles back to phone.")
+        print("="*50 + "\n")
+
+        return {
+            "text": result["text"], 
+            "vtt": vtt_output,
+            "usage": "Transcribed successfully"
+        }
     except Exception as e:
         return {"error": str(e)}
     finally:

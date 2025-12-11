@@ -7,15 +7,22 @@ export default function Home() {
   const [subtitles, setSubtitles] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [vttUrl, setVttUrl] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      // Create local URL for immediate playback
+      const url = URL.createObjectURL(selectedFile);
+      setVideoUrl(url);
+      setVttUrl(null); // Reset subtitles for new file
+      setSubtitles("");
     }
   };
 
   const cleanSubtitles = (rawText: string) => {
-    // Basic cleaning if needed, currently just trimming
     return rawText.trim();
   };
 
@@ -25,11 +32,13 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setSubtitles("");
+    setVttUrl(null);
 
     const formData = new FormData();
     formData.append("file", file);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    // Hardcoded backend URL (Persistent Subdomain)
+    const apiUrl = "https://ayush-app-backend.loca.lt";
 
     try {
       const response = await fetch(`${apiUrl}/transcribe`, {
@@ -47,6 +56,13 @@ export default function Home() {
       }
 
       setSubtitles(cleanSubtitles(data.text));
+
+      // Create VTT Blob URL
+      if (data.vtt) {
+        const vttBlob = new Blob([data.vtt], { type: "text/vtt" });
+        const vttUrl = URL.createObjectURL(vttBlob);
+        setVttUrl(vttUrl);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
     } finally {
@@ -63,9 +79,31 @@ export default function Home() {
             Subtitle Generator
           </h1>
           <p className="text-lg text-zinc-400 max-w-lg mx-auto">
-            Upload your video or audio file. AI will listen and type out the words for you.
+            Upload your video. AI will generate subtitles and play them for you.
           </p>
         </div>
+
+        {/* Video Player Section */}
+        {videoUrl && (
+          <div className="w-full aspect-video bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 shadow-2xl">
+            <video
+              controls
+              className="w-full h-full"
+              src={videoUrl}
+              crossOrigin="anonymous"
+            >
+              {vttUrl && (
+                <track
+                  kind="subtitles"
+                  src={vttUrl}
+                  srcLang="en"
+                  label="English (AI)"
+                  default
+                />
+              )}
+            </video>
+          </div>
+        )}
 
         {/* Upload Section */}
         <div className="flex flex-col items-center gap-8">
@@ -75,7 +113,7 @@ export default function Home() {
               <label className="flex flex-col items-center justify-center gap-4 cursor-pointer w-full h-40 border-2 border-dashed border-zinc-700 hover:border-zinc-500 rounded-lg transition-colors">
                 <input
                   type="file"
-                  accept="audio/*,video/*"
+                  accept="video/*,audio/*"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -105,7 +143,7 @@ export default function Home() {
                 disabled={!file || loading}
                 className="w-full mt-6 bg-white text-black font-semibold py-3 px-4 rounded-lg hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? "Processing Audio..." : "Generate Subtitles"}
+                {loading ? "Processing Video..." : "Generate Subtitles"}
               </button>
             </div>
           </div>
@@ -121,7 +159,7 @@ export default function Home() {
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-zinc-200">Transcription</h2>
+                  <h2 className="text-xl font-semibold text-zinc-200">Transcription Text</h2>
                   <button
                     onClick={() => navigator.clipboard.writeText(subtitles)}
                     className="text-sm text-zinc-500 hover:text-white transition-colors"
