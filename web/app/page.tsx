@@ -29,8 +29,10 @@ export default function Home() {
     const formData = new FormData();
     formData.append("file", file);
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
     try {
-      const response = await fetch("http://localhost:8000/transcribe", {
+      const response = await fetch(`${apiUrl}/transcribe`, {
         method: "POST",
         body: formData,
       });

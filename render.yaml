@@ -1,0 +1,29 @@
+
+services:
+  # Backend Service (Python/Whisper)
+  - type: web
+    name: convo-backend
+    env: docker
+    root: whisper_core
+    plan: free
+    healthCheckPath: /docs
+    envVars:
+      - key: PORT
+        value: 8000
+    autoDeploy: true
+
+  # Frontend Service (Next.js)
+  # You can delete this block if you prefer deploying on Vercel
+  - type: web
+    name: convo-frontend
+    env: node
+    root: web
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: convo-backend
+          type: web
+          property: url
