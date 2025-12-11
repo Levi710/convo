@@ -4,7 +4,7 @@ services:
   - type: web
     name: convo-backend
     env: docker
-    root: whisper_core
+    rootDir: whisper_core
     plan: free
     healthCheckPath: /docs
     envVars:
@@ -17,7 +17,7 @@ services:
   - type: web
     name: convo-frontend
     env: node
-    root: web
+    rootDir: web
     buildCommand: npm install && npm run build
     startCommand: npm start
     plan: free
