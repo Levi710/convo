@@ -23,7 +23,4 @@ services:
     plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: convo-backend
-          type: web
-          property: url
+        value: https://convo-backend.onrender.com
